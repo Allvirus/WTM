@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 using System.Collections;
 using System.Collections.Generic;
@@ -36,11 +36,6 @@ namespace WalkingTec.Mvvm.TagHelpers.LayUI
 
         public override void Process(TagHelperContext context, TagHelperOutput output)
         {
-            output.TagName = "input";
-            output.TagMode = TagMode.StartTagOnly;
-            output.Attributes.Add("type", "checkbox");
-            output.Attributes.Add("name", Field.Name);
-
             var modelType = Field.Metadata.ModelType;
             var listitems = new List<ComboSelectListItem>();
 
@@ -63,7 +58,7 @@ namespace WalkingTec.Mvvm.TagHelpers.LayUI
                 }
                 else if (modelType.IsBoolOrNullableBool())
                 {
-                    listitems = new List<ComboSelectListItem>() { new ComboSelectListItem { Value = "true", Selected = Field.Model?.ToString().ToLower() == "true" } };
+                    listitems = new List<ComboSelectListItem>() { new ComboSelectListItem { Value = "true", Text = "|", Selected = Field.Model?.ToString().ToLower() == "true" } };
                 }
             }
             else
@@ -90,6 +85,7 @@ namespace WalkingTec.Mvvm.TagHelpers.LayUI
             output.TagName = "div";
             output.TagMode = TagMode.StartTagAndEndTag;
             output.Attributes.Clear();
+            output.Attributes.Add("div-for", "checkbox");
             for (int i = 0; i < listitems.Count; i++)
             {
                 var item = listitems[i];

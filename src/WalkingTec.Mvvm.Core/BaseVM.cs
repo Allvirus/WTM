@@ -1,9 +1,14 @@
-﻿using Newtonsoft.Json;
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
+
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Localization;
+using Newtonsoft.Json;
+
 using WalkingTec.Mvvm.Core.Extensions;
 
 namespace WalkingTec.Mvvm.Core
@@ -17,7 +22,10 @@ namespace WalkingTec.Mvvm.Core
         /// <summary>
         /// BaseVM
         /// </summary>
-        public BaseVM() { }
+        public BaseVM()
+        {
+            FC = new Dictionary<string, object>();
+        }
 
         /// <summary>
         /// BaseVM
@@ -47,11 +55,6 @@ namespace WalkingTec.Mvvm.Core
             }
         }
 
-        /// <summary>
-        /// 上传文件的Id，方便导入等操作中进行绑定，这类操作需要上传文件但不需要记录在数据库中，所以Model层中没有文件Id的字段
-        /// </summary>
-        [Display(Name = "UploadFile")]
-        public Guid? UploadFileId { get; set; }
 
         /// <summary>
         /// 前台传递过来的弹出窗口ID，多层弹出窗口用逗号分隔
@@ -109,6 +112,7 @@ namespace WalkingTec.Mvvm.Core
         /// <summary>
         /// 获取当前使用的连接字符串
         /// </summary>
+        [JsonIgnore]
         public string CurrentCS { get; set; }
 
         /// <summary>
@@ -179,22 +183,17 @@ namespace WalkingTec.Mvvm.Core
             }
         }
 
+        [JsonIgnore]
+        public object Controller { get; set; }
+
+        [JsonIgnore]
+        public IDistributedCache Cache { get; set; }
+
         /// <summary>
         /// 当前登录人信息
         /// </summary>
         [JsonIgnore]
-        public LoginUserInfo LoginUserInfo
-        {
-            get
-            {
-                return Session?.Get<LoginUserInfo>("UserInfo");
-            }
-            set
-            {
-                Session?.Set("UserInfo", value);
-            }
-
-        }
+        public LoginUserInfo LoginUserInfo { get; set; }
 
         /// <summary>
         /// 当前Url
@@ -226,7 +225,11 @@ namespace WalkingTec.Mvvm.Core
         [JsonIgnore]
         public List<Guid> DeletedFileIds { get; set; }
 
+        [JsonIgnore]
         public string ControllerName { get; set; }
+
+        [JsonIgnore]
+        public IStringLocalizer Localizer { get; set; }
         #endregion
 
         #region Event
@@ -303,20 +306,23 @@ namespace WalkingTec.Mvvm.Core
             ConfigInfo = vm.ConfigInfo;
             DataContextCI = vm.DataContextCI;
             UIService = vm.UIService;
+            LoginUserInfo = vm.LoginUserInfo;
         }
 
         /// <summary>
-        /// 创建DbContext对象
+        /// Create DbContext
         /// </summary>
-        /// <param name="csName"></param>
-        /// <returns></returns>
-        public virtual IDataContext CreateDC(string csName = null)
+        /// <param name="csName">ConnectionString key, "default" will be used if not set</param>
+        /// <param name="dbtype">DataBase type, appsettings dbtype will be used if not set</param>
+        /// <returns>data context</returns>
+        public virtual IDataContext CreateDC(string csName = null, DBTypeEnum? dbtype = null)
         {
             if (string.IsNullOrEmpty(csName))
             {
-                csName = CurrentCS??"default";
+                csName = CurrentCS ?? "default";
             }
-            return (IDataContext)DataContextCI?.Invoke(new object[] { ConfigInfo.ConnectionStrings.Where(x => x.Key.ToLower() == csName).Select(x => x.Value).FirstOrDefault(), ConfigInfo.DbType });
+            var dbt = dbtype ?? ConfigInfo.DbType;
+            return (IDataContext)DataContextCI?.Invoke(new object[] { ConfigInfo.ConnectionStrings.Where(x => x.Key.ToLower() == csName).Select(x => x.Value).FirstOrDefault(), dbt });
         }
 
         /// <summary>
